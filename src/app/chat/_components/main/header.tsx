@@ -1,15 +1,12 @@
-"use client";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { Prisma } from "@/generated/prisma";
-import { socket } from "@/socket";
 import { Phone, Video } from "lucide-react";
 import Link from "next/link";
-import React, { useState } from "react";
+import React from "react";
 
 type Props = {
   sessionUserId: string;
-  user: Prisma.UserGetPayload<{}>;
+  user: any;
 };
 
 export default function Header({ sessionUserId, user }: Props) {
@@ -20,7 +17,7 @@ export default function Header({ sessionUserId, user }: Props) {
           <AvatarImage src="/avatars/01.png" alt="Image" />
           <AvatarFallback>
             {user.name.charAt(0).toUpperCase() +
-              user.name.charAt(1).toUpperCase()}
+              user.name.split(" ")[1].charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
         <div>
@@ -30,10 +27,12 @@ export default function Header({ sessionUserId, user }: Props) {
       </div>
       <div className="flex gap-4">
         <Button variant={"ghost"} size={"icon"}>
-          <Phone />
+          <Link target="_blank" href={`/call?userId=${user.id}`}>
+            <Phone />
+          </Link>
         </Button>{" "}
         <Button variant={"ghost"} size={"icon"} asChild>
-          <Link href={`/call?userId=${user.id}`}>
+          <Link target="_blank" href={`/call?userId=${user.id}&video=on`}>
             <Video />
           </Link>
         </Button>

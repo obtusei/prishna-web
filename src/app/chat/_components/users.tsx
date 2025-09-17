@@ -1,32 +1,23 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Prisma } from "@/generated/prisma";
-import prisma from "@/prisma";
+import api from "@/lib/axios";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import React, { ReactNode } from "react";
 
 type Props = {
   sessionId: string | undefined;
-  chats:
-    | Prisma.ChatGetPayload<{
-        include: {
-          messages: true;
-        };
-      }>[]
-    | undefined;
   children: ReactNode;
 };
 
-export default async function Users({ sessionId, chats, children }: Props) {
-  const users = await prisma.user.findMany({
-    where: {
-      NOT: {
-        id: sessionId,
-      },
-    },
-    include: {
-      chats: true,
-    },
-  });
+export default async function Users({ sessionId, children }: Props) {
+  const cookieStore = await cookies();
+  const { data: suggestionUsers } = await api.get(
+    "http://localhost:4000/api/user/all"
+  );
+  const { data: chats } = await api.get(
+    "http://localhost:4000/api/user/chatted"
+  );
+
   return (
     <div className="fixed left-0 inset-y-0 bg-white w-96 border-r">
       {children}
@@ -38,7 +29,7 @@ export default async function Users({ sessionId, chats, children }: Props) {
           </h1>
           <div className="space-y-2 ">
             {chats &&
-              chats.map((chat, index) => (
+              chats.map((chat: any, index: number) => (
                 <Link
                   href={`/chat?user=${chat.id}`}
                   key={index}
@@ -49,10 +40,11 @@ export default async function Users({ sessionId, chats, children }: Props) {
                     <AvatarFallback>AB</AvatarFallback>
                   </Avatar>
                   <div className="flex gap-0 flex-col leading-tight">
-                    <span className="text-lg">{chat.id}</span>
+                    <span className="text-lg">{chat.name}</span>
                     <span className="text-sm">
-                      {new Date(chat.createdAt).toLocaleDateString()}
-                      {/* {chat.content.length > 0 ? chat.content[0].content : ""} */}
+                      {/* {chat.messages.length > 0
+                        ? chat.messages[0].content
+                        : `Send "Hi" to ${chat.name}`} */}
                     </span>
                   </div>
                 </Link>
@@ -64,7 +56,7 @@ export default async function Users({ sessionId, chats, children }: Props) {
             Suggestions
           </h1>
           <div className="space-y-2 ">
-            {users.map((item, index) => (
+            {suggestionUsers.map((item: any, index: number) => (
               <Link
                 href={`/chat?user=${item.id}`}
                 key={index}

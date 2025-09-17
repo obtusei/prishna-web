@@ -2,28 +2,23 @@ import React from "react";
 import Header from "./header";
 import { ChatSection } from "./chat";
 import Sidebar from "./user-sidebar";
-import prisma from "@/prisma";
 import { notFound } from "next/navigation";
-import { Prisma } from "@/generated/prisma";
+import { cookies } from "next/headers";
+import api from "@/lib/axios";
 
 type Props = {
   sessionUserId: string;
   receiverUserId?: string | string[] | undefined;
-  currentChat:
-    | Prisma.ChatGetPayload<{
-        include: {
-          messages: true;
-          members: true;
-        };
-      }>
-    | undefined;
+  currentChat: any | undefined;
 };
 
 export default async function MainSection({
-  sessionUserId,
   receiverUserId,
+  sessionUserId,
   currentChat,
-}: Props) {
+}: // sessionUserId,
+// receiverUserId,
+Props) {
   if (!receiverUserId)
     return (
       <div className="pl-96 p-10 h-screen flex items-center justify-center text-center">
@@ -31,15 +26,13 @@ export default async function MainSection({
       </div>
     );
 
-  const findUser = await prisma.user.findUnique({
-    where: {
-      id: String(receiverUserId),
-    },
-  });
+  const findUser = await api.get(
+    `http://localhost:4000/api/user/${receiverUserId}`
+  );
   if (!findUser) notFound();
   return (
     <div>
-      <Header user={findUser} sessionUserId={sessionUserId} />
+      <Header user={findUser.data} sessionUserId={sessionUserId} />
       <ChatSection
         messagesFromDB={currentChat?.messages}
         sessionUserId={sessionUserId}

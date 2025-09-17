@@ -9,7 +9,7 @@ export const auth = {
         .map((c) => `${c.name}=${c.value}`)
         .join("; ");
 
-      const res = await fetch("http://localhost:4000/api/me", {
+      const res = await fetch("http://localhost:4000/api/session", {
         headers: {
           Cookie: cookieHeader, // 👈 forward cookies to backend
         },

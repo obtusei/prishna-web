@@ -150,7 +150,6 @@ export default function VideoCall() {
   // Caller initiates a call
   async function startCall() {
     if (!targetUserId) redirect("/");
-    alert(`target is ${targetUserId}`);
     setIsCalling(true);
 
     await getLocalStream();

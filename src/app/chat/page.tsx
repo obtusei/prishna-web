@@ -3,6 +3,8 @@ import Connection from "./_components/connection";
 import MainSection from "./_components/main";
 import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
+import api from "@/lib/axios";
 
 export default async function ChatPage({
   searchParams,
@@ -12,29 +14,16 @@ export default async function ChatPage({
   const userId = (await searchParams).user;
   const session = await auth.getSession();
   if (!session) redirect("/login");
-  const currentUser = await prisma.user.findUnique({
-    where: {
-      id: session?.user.id,
-    },
-    include: {
-      chats: {
-        include: {
-          members: true,
-          messages: true,
-        },
-      },
-    },
-  });
+  const { data: currentUser } = await api.get("/api/chats");
   const currentChat = userId
-    ? currentUser?.chats.find((chat) =>
-        chat.members.some((mem) => mem.id === userId)
+    ? currentUser?.chats.find((chat: any) =>
+        chat.members.some((mem: any) => mem.id === userId)
       )
     : undefined;
   return (
     <>
-      {JSON.stringify(currentUser)}
       <div className="min-h-screen relative flex flex-col justify-end">
-        <Users sessionId={currentUser?.id} chats={currentUser?.chats}>
+        <Users sessionId={currentUser?.id}>
           <Connection />
         </Users>
         <MainSection

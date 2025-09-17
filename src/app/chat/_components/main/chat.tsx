@@ -1,17 +1,21 @@
 "use client";
 
 import * as React from "react";
-import { ChevronDown, Send } from "lucide-react";
+import { ChevronDown, Reply, Send, Smile } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Prisma } from "@/generated/prisma";
 import { socket } from "@/socket";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 type Props = {
   sessionUserId: string;
   receiverUserId: string;
-  messagesFromDB: Prisma.MessageGetPayload<{}>[] | undefined;
+  messagesFromDB: any | undefined;
 };
 export function ChatSection({
   sessionUserId,
@@ -19,7 +23,7 @@ export function ChatSection({
   messagesFromDB,
 }: Props) {
   const [messages, setMessages] = React.useState(
-    messagesFromDB?.map((item) => {
+    messagesFromDB?.map((item: any) => {
       return {
         role: item.senderId == receiverUserId ? "SENDER" : "SESSION_USER",
         content: item.content,
@@ -28,8 +32,8 @@ export function ChatSection({
   );
   const [newMessage, setNewMessage] = React.useState("");
   const inputLength = newMessage.trim().length;
-  const role = "user"; //change this
   const messagesEndRef = React.useRef<HTMLDivElement | null>(null);
+  const [isTyping, setIsTyping] = React.useState();
   const [isScrolled, setIsScrolled] = React.useState(false);
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -52,8 +56,8 @@ export function ChatSection({
 
   React.useEffect(() => {
     // socket.emit("register", username);
-    socket.on("newPrivateMessage", (msg) => {
-      setMessages((prev) => [
+    socket.on("newMessage", (msg) => {
+      setMessages((prev: any) => [
         ...prev,
         {
           role: msg.role,
@@ -61,45 +65,112 @@ export function ChatSection({
         },
       ]);
     });
+    socket.on("typing", (msg) => {
+      setIsTyping(msg.isTyping);
+    });
     scrollToBottom();
 
     return () => {
-      socket.off("newPrivateMessage");
+      socket.off("newMessage");
+      socket.off("typing");
     };
-  }, [messages]);
+  }, [messages, isTyping]);
 
   const sendPrivateMessage = () => {
     if (!newMessage || !receiverUserId) return;
-    console.log(`New message: ${newMessage}`);
-    console.log(`Receiver User ID: ${receiverUserId}`);
-    socket.emit("sendPrivateMessage", {
+    socket.emit("sendMessage", {
       sender: sessionUserId,
       receiver: receiverUserId,
       content: newMessage,
     });
-    console.log(newMessage);
     setNewMessage("");
     scrollToBottom();
   };
 
+  const sendTypingIndication = (isTyping: boolean) => {
+    socket.emit("typing", {
+      sender: sessionUserId,
+      receiver: receiverUserId,
+      isTyping: isTyping,
+    });
+  };
+
   return (
     <>
-      <div className="pt-20 pb-20 px-96">
+      <div className="pt-20 pb-20 relative px-96">
         <div className="space-y-4 p-4 h-full">
           {messages &&
-            messages.map((message, index) => (
+            messages.map((message: any, index: number) => (
               <div
                 key={index}
-                className={cn(
-                  "flex w-max max-w-[75%] flex-col gap-2 rounded-lg px-3 py-2 text-sm",
-                  message.role === "SESSION_USER"
-                    ? "ml-auto bg-primary text-primary-foreground"
-                    : "bg-muted"
-                )}
+                className={`flex ${
+                  message.role == "SESSION_USER"
+                    ? "justify-end "
+                    : "justify-start "
+                } gap-1 group`}
               >
-                {message.content}
+                <Button
+                  variant={"ghost"}
+                  size={"icon"}
+                  className={`invisible group-hover:visible ${
+                    message.role == "SESSION_USER" ? "order-0" : "order-2"
+                  }`}
+                >
+                  <Reply />
+                </Button>
+                <Popover>
+                  {" "}
+                  <PopoverTrigger
+                    className={`${
+                      message.role == "SESSION_USER" ? "order-first" : "order-2"
+                    } invisible group-hover:visible`}
+                    asChild
+                  >
+                    <Button variant={"ghost"} size={"icon"}>
+                      <Smile className="size-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent side="top" className="p-2 space-x-2 w-fit ">
+                    {["❤️", "😂", "😭", "🥲", "💋"].map((item, index) => (
+                      <Button
+                        size={"icon"}
+                        className="rounded-full text-xl"
+                        variant={"ghost"}
+                        key={index}
+                      >
+                        {item}
+                      </Button>
+                    ))}
+                  </PopoverContent>
+                </Popover>
+                <div
+                  className={cn(
+                    "rounded-lg px-3 py-2 relative",
+                    message.role === "SESSION_USER"
+                      ? "bg-primary text-primary-foreground"
+                      : "bg-muted"
+                  )}
+                >
+                  {message.content}
+                  {/* <div className="absolute right-0 -bottom-3 text-sm border bg-white rounde-full px-1 rounded-full">
+                    😂
+                  </div> */}
+                </div>
               </div>
             ))}
+          <div
+            className={cn(
+              " w-max max-w-[75%] gap-1 bg-muted rounded-lg px-3 py-2 text-sm",
+              isTyping ? "flex" : "hidden"
+            )}
+          >
+            {[1, 2, 3].map((item, index) => (
+              <div
+                key={index}
+                className="w-2.5 h-2.5 rounded-full animate-pulse bg-gray-400"
+              ></div>
+            ))}
+          </div>
           <div ref={messagesEndRef} />
         </div>
       </div>
@@ -126,7 +197,15 @@ export function ChatSection({
             className="flex-1"
             autoComplete="off"
             value={newMessage}
-            onChange={(event) => setNewMessage(event.target.value)}
+            onKeyDown={(e) => {
+              sendTypingIndication(true);
+            }}
+            onKeyUp={(e) => {
+              sendTypingIndication(false);
+            }}
+            onChange={(event) => {
+              setNewMessage(event.target.value);
+            }}
           />
           <Button type="submit" size="icon" disabled={inputLength === 0}>
             <Send />

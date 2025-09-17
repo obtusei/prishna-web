@@ -15,12 +15,14 @@ import { Button } from "./ui/button";
 import { Phone } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { socket } from "@/socket";
+import Link from "next/link";
 type Props = {};
 
 export default function IncomingCall({}: Props) {
   const [openCallDialog, setOpenCallDialog] = useState(false);
   const [incomingCallFrom, setIncomingCallFrom] = useState<string | null>(null);
   const userId = "";
+
   useEffect(() => {
     // incoming offer from another user
     socket.on("incoming-call", async ({ fromUserId, offer }) => {
@@ -82,10 +84,12 @@ export default function IncomingCall({}: Props) {
               <Phone className="rotate-[135deg]" /> End Call
             </Button>
             <Button
-              onClick={acceptCall}
               className=" bg-green-600 hover:bg-green-700 active:bg-green-800"
+              asChild
             >
-              <Phone className="" /> Accept Call
+              <Link href={`/call?user={}`}>
+                <Phone className="" /> Accept Call
+              </Link>
             </Button>
           </AlertDialogFooter>
         </AlertDialogContent>
